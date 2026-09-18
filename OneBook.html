@@ -1,5 +1,5 @@
 <!--
-  OneBook 1.0
+  OneBook 1.3
   Copyright (c) 2026 Josh Wheatstone
   All rights reserved.
 
@@ -129,15 +129,6 @@ select{cursor:pointer}
   flex:1 1 auto;min-width:0;height:50px;padding:0 4px;
   background:transparent;border:0;position:relative;z-index:auto;
 }
-.brand{display:flex;align-items:center;gap:10px;min-width:0}
-.brandMark{
-  width:27px;height:27px;border-radius:9px;flex:0 0 auto;
-  background:linear-gradient(140deg,var(--accent),var(--accent-2));
-  display:grid;place-items:center;color:#fff;
-  box-shadow:0 3px 9px -2px rgba(91,99,232,.55);
-}
-.brandMark svg{width:15px;height:15px}
-#appName{font-size:15px;font-weight:700;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topActions{margin-left:auto;display:flex;align-items:center;gap:6px}
 
 .iconBtn{
@@ -353,32 +344,55 @@ select{cursor:pointer}
 
 .emptyNote{padding:18px 12px;font-size:12px;color:var(--muted);text-align:center;line-height:1.6}
 
-/* ---------- Collapsed OneNote-style notebook cards ---------- */
-#workspace.notebook-collapsed{grid-template-columns:48px minmax(0,1fr) var(--pagesW)}
-#workspace.notebook-folding-out .notebookHead{animation:notebook-fold-out .24s cubic-bezier(.2,.75,.25,1) both}
-@keyframes notebook-fold-out{0%{transform:perspective(700px) rotateY(0deg) scaleX(1)}45%{transform:perspective(700px) rotateY(78deg) scaleX(.28)}100%{transform:perspective(700px) rotateY(0deg) scaleX(1)}}
-#workspace.notebook-collapsed #notebookPane{width:48px;border-right:1px solid var(--line)}
-#workspace.notebook-collapsed .searchWrap{opacity:0;transform:translateX(-12px);pointer-events:none;height:0;margin:0;overflow:hidden}
-#workspace.notebook-collapsed #notebookList{padding:8px 5px 52px;overflow-x:hidden}
-#workspace.notebook-collapsed .notebook{margin:0 0 6px}
-#workspace.notebook-collapsed .notebookHead{width:38px;height:112px;min-height:112px;margin:0 auto;padding:0;display:block;border:1px solid transparent;border-radius:9px;background:transparent;box-shadow:none;overflow:hidden;animation:notebook-fold-in .24s cubic-bezier(.2,.75,.25,1) both}
-@keyframes notebook-fold-in{0%{transform:perspective(700px) rotateY(0deg) scaleX(1)}45%{transform:perspective(700px) rotateY(78deg) scaleX(.28)}100%{transform:perspective(700px) rotateY(0deg) scaleX(1)}}
-#workspace.notebook-collapsed .notebookHead:hover{background:var(--surface-3)}
-#workspace.notebook-collapsed .notebookHead.active{background:var(--surface);border-color:var(--line);box-shadow:var(--shadow-1)}
-#workspace.notebook-collapsed .notebookHead.active:before{content:"";position:absolute;left:-5px;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
-#workspace.notebook-collapsed .chev,#workspace.notebook-collapsed .rowMenu{display:none}
-/* Collapsed tab geometry: icon at the top, title directly beneath it.
-   The title is rotated without changing its reading direction. */
-#workspace.notebook-collapsed .bookIcon{position:absolute;left:50%;top:8px;width:22px;height:22px;transform:translateX(-50%);margin:0;color:var(--accent);z-index:2}
-#workspace.notebook-collapsed .bookIcon svg{width:19px;height:19px}
-#workspace.notebook-collapsed .bookName{position:absolute;left:50%;top:72px;width:68px;height:18px;max-width:none;display:block;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px;line-height:18px;text-align:center;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center center}
-#workspace.notebook-collapsed .sectionList{max-height:0;opacity:0;margin:0;padding:0;border-left-color:transparent}
+/* ---------- Collapsed notebooks: section tabs stood on end ----------
+   Same chip as #sectionTabs. The whole chip rotates -90deg so the book
+   icon sits at the bottom of the spine and the title reads upward.
+   No 3D fold: that animation re-fired on every list rebuild. */
+#workspace.notebook-collapsed{grid-template-columns:35px minmax(0,1fr) var(--pagesW)}
+#workspace.notebook-collapsed #notebookPane{width:35px;border-right:1px solid var(--line)}
+#workspace.notebook-collapsed .searchWrap{opacity:0;pointer-events:none;height:0;margin:0;overflow:hidden}
+#workspace.notebook-collapsed #notebookList{padding:10px 0 52px;overflow-x:hidden;overflow-y:auto}
+#workspace.notebook-collapsed .notebook{width:34px;height:118px;margin:0 0 4px;overflow:visible}
+#workspace.notebook-collapsed .notebookHead{
+  position:relative;
+  width:118px;height:34px;min-height:34px;margin:0;
+  padding:0 10px 0 12px;gap:7px;
+  display:inline-flex;align-items:center;
+  border:1px solid transparent;border-bottom:0;
+  border-radius:9px 9px 0 0;
+  background:transparent;box-shadow:none;
+  transform:rotate(-90deg) translateX(-100%);
+  transform-origin:top left;
+  overflow:hidden;
+}
+#workspace.notebook-collapsed .notebookHead:hover{background:rgba(128,140,168,.13);color:var(--text)}
+#workspace.notebook-collapsed .notebookHead.active{
+  background:var(--page);border-color:var(--line);color:var(--text);
+  box-shadow:none;
+}
+#workspace.notebook-collapsed .notebookHead.active:before{content:none}
+#workspace.notebook-collapsed #notebookPane .chev,
+#workspace.notebook-collapsed #notebookPane .rowMenu{display:none}
+#workspace.notebook-collapsed .bookIcon{
+  position:static;flex:0 0 auto;width:16px;height:16px;
+  transform:none;margin:0;color:var(--muted);
+}
+#workspace.notebook-collapsed .notebookHead.active .bookIcon{color:var(--accent)}
+#workspace.notebook-collapsed .bookIcon svg{width:16px;height:16px}
+#workspace.notebook-collapsed .bookName{
+  position:static;left:auto;top:auto;width:auto;height:auto;max-width:none;
+  flex:1;min-width:0;display:block;
+  font-size:12.5px;font-weight:500;line-height:1.2;text-align:left;
+  transform:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#workspace.notebook-collapsed .notebookHead.active .bookName{font-weight:650}
+#workspace.notebook-collapsed .sectionList{max-height:0;opacity:0;margin:0;padding:0;border-left-color:transparent;pointer-events:none}
 #workspace.notebook-collapsed .paneFooter{position:absolute;left:0;right:0;bottom:0;height:48px;padding:5px;border-top:1px solid var(--line);background:var(--sidebar);display:flex;align-items:center;justify-content:center}
 #workspace.notebook-collapsed .paneFooter .ghostBtn{display:none}
-.notebookToggle{flex:0 0 30px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--surface);border-radius:8px;color:var(--muted);transition:background .14s,color .14s,border-color .14s,transform .24s}
+.notebookToggle{flex:0 0 30px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--surface);border-radius:8px;color:var(--muted);transition:background .14s,color .14s,border-color .14s}
 .notebookToggle:hover{background:var(--surface-3);color:var(--text);border-color:var(--line-strong)}
 .notebookToggle svg{width:14px;height:14px}
-#workspace.notebook-collapsed .notebookToggle{transform:rotate(180deg)}
+#workspace.notebook-collapsed .notebookToggle svg{transform:rotate(180deg)}
 
 .paneFooter{
   flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:8px 10px;border-top:1px solid var(--line);
@@ -562,6 +576,7 @@ body.drawingMode .drawIndicator{opacity:1;transform:none}
 .cardMenu button:hover{background:var(--surface-3)}
 .cardMenu .danger{color:var(--danger)}
 .cardMenu .danger:hover{background:var(--danger-soft)}
+.cardMenu .menuSep{height:1px;margin:4px 6px;background:var(--line)}
 
 .popover{
   position:fixed;z-index:9000;display:grid;grid-template-columns:repeat(5,1fr);
@@ -603,18 +618,16 @@ body.drawingMode .drawIndicator{opacity:1;transform:none}
 
   <!-- ─────────────── Combined top bar ─────────────── -->
   <header id="topbar">
-    <div class="brand">
-      <span class="brandMark">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-        </svg>
-      </span>
-      <span id="appName">OneBook</span>
-    </div>
+
 
     <div id="formatbar">
 
+    <button class="toolBtn" id="fileMenuBtn" type="button" title="File">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <circle cx="6" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18" cy="12" r="1.7"/>
+      </svg>
+    </button>
+    <input id="importFile" type="file" accept=".html,.htm,.json,text/html,application/json" hidden>
     <button class="toolBtn" id="undo" type="button" title="Undo">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
     </button>
@@ -719,13 +732,6 @@ body.drawingMode .drawIndicator{opacity:1;transform:none}
     <select id="drawWidth" class="toolSelect drawWidth drawOnly" title="Drawing width">
       <option value="2">Fine</option><option value="4" selected>Medium</option><option value="7">Broad</option><option value="11">Marker</option>
     </select>
-    <button class="toolBtn drawOnly" id="drawUndo" type="button" title="Undo drawing">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
-    </button>
-    <button class="toolBtn drawOnly" id="drawClear" type="button" title="Clear drawings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="m10 10 4 4m0-4-4 4"/></svg>
-    </button>
-
     <span class="tbSep"></span>
 
     <select id="style" class="toolSelect" title="Paragraph style">
@@ -746,12 +752,6 @@ body.drawingMode .drawIndicator{opacity:1;transform:none}
     </div>
 
     <div class="topActions">
-      <button class="iconBtn" id="exportBtn" type="button" title="Export as HTML (Ctrl+S)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>
-        </svg>
-      </button>
       <button class="iconBtn" id="themeToggle" type="button" title="Toggle dark mode"></button>
     </div>
   </header>
@@ -880,7 +880,11 @@ let drawTool        = "pen";
 let drawColor       = "#1b1f27";
 let drawWidth       = 4;
 let drawingPointer  = null;
-let drawUndoStack   = [];
+let historyUndo = [];
+let historyRedo = [];
+let historyApplying = false;
+let historyTimer = null;
+let historyLastSnapshot = null;
 
 db.notebooks.forEach(n => openBooks[n.id] = true);
 
@@ -927,12 +931,6 @@ function fmtDate(ts){
 function applyNotebookPaneState(){
   const workspace = $("workspace");
   workspace.classList.toggle("notebook-collapsed", notebookCollapsed);
-  workspace.classList.remove("notebook-folding-out");
-  if(!notebookCollapsed) {
-    void workspace.offsetWidth;
-    workspace.classList.add("notebook-folding-out");
-    setTimeout(() => workspace.classList.remove("notebook-folding-out"), 260);
-  }
   const toggle = $("notebookToggle");
   toggle.innerHTML = notebookCollapsed
     ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'
@@ -943,8 +941,8 @@ function applyNotebookPaneState(){
 
 function renderAll(){
   ensure();
-  $("appName").textContent = db.name || "OneBook";
-    renderNotebooks();
+  applyNotebookPaneState();
+  renderNotebooks();
   renderSections();
   renderPages();
   loadPage();
@@ -1158,7 +1156,7 @@ function loadPage(){
   $("pageTitle").value = p.title || "";
   $("editor").innerHTML = p.body || "";
   $("tags").value = (p.tags || []).join(", ");
-  drawUndoStack = [];
+  historyReset();
   renderDrawings();
   updateMeta();
 }
@@ -1180,6 +1178,100 @@ function updateMeta(){
 }
 
 /* ============================================================
+   Unified page history
+   ============================================================ */
+function historySnapshot(){
+  const p = pageObj();
+  if(!p) return null;
+  return {
+    title: $("pageTitle").value,
+    body: $("editor").innerHTML,
+    tags: $("tags").value,
+    drawing: JSON.parse(JSON.stringify(p.drawing || []))
+  };
+}
+
+function historyEqual(a,b){
+  return !!a && !!b &&
+    a.title === b.title &&
+    a.body === b.body &&
+    a.tags === b.tags &&
+    JSON.stringify(a.drawing) === JSON.stringify(b.drawing);
+}
+
+function historyReset(){
+  historyUndo = [];
+  historyRedo = [];
+  historyLastSnapshot = historySnapshot();
+  updateHistoryButtons();
+}
+
+function historyCapture(){
+  if(historyApplying) return;
+  const snap = historySnapshot();
+  if(!snap) return;
+  if(!historyLastSnapshot){
+    historyLastSnapshot = snap;
+    return;
+  }
+  if(historyEqual(historyLastSnapshot, snap)) return;
+  historyUndo.push(historyLastSnapshot);
+  if(historyUndo.length > 100) historyUndo.shift();
+  historyRedo = [];
+  historyLastSnapshot = snap;
+  updateHistoryButtons();
+}
+
+function historyCaptureSoon(){
+  clearTimeout(historyTimer);
+  historyTimer = setTimeout(historyCapture, 0);
+}
+
+function restoreHistorySnapshot(snap){
+  const p = pageObj();
+  if(!p || !snap) return;
+  historyApplying = true;
+  $("pageTitle").value = snap.title;
+  $("editor").innerHTML = snap.body;
+  $("tags").value = snap.tags;
+  p.title = snap.title;
+  p.body = snap.body;
+  p.tags = snap.tags.split(",").map(x => x.trim()).filter(Boolean);
+  p.drawing = JSON.parse(JSON.stringify(snap.drawing || []));
+  p.modified = Date.now();
+  historyApplying = false;
+  historyLastSnapshot = historySnapshot();
+  renderDrawings();
+  renderPages();
+  updateMeta();
+  saveSoon();
+  updateHistoryButtons();
+}
+
+function undoPage(){
+  if(!historyUndo.length) return;
+  const current = historySnapshot();
+  const previous = historyUndo.pop();
+  if(current) historyRedo.push(current);
+  restoreHistorySnapshot(previous);
+}
+
+function redoPage(){
+  if(!historyRedo.length) return;
+  const current = historySnapshot();
+  const next = historyRedo.pop();
+  if(current) historyUndo.push(current);
+  restoreHistorySnapshot(next);
+}
+
+function updateHistoryButtons(){
+  $("undo").disabled = historyUndo.length === 0;
+  $("redo").disabled = historyRedo.length === 0;
+  $("undo").style.opacity = historyUndo.length ? "" : ".38";
+  $("redo").style.opacity = historyRedo.length ? "" : ".38";
+}
+
+/* ============================================================
    Editing / persistence
    ============================================================ */
 function commit(opts){
@@ -1190,6 +1282,7 @@ function commit(opts){
   p.tags   = $("tags").value.split(",").map(s => s.trim()).filter(Boolean);
   p.modified = Date.now();
   saveSoon();
+  if(!historyApplying) historyCapture();
   if(opts && opts.list) renderPages();
   if(opts && opts.meta) updateMeta();
 }
@@ -1460,29 +1553,18 @@ function setDrawTool(tool){
   $("drawingLayer").style.cursor = tool === "eraser" ? "cell" : "crosshair";
 }
 
-function pushDrawUndo(){
-  const p = drawingPage();
-  if(!p) return;
-  drawUndoStack.push(JSON.stringify(p.drawing || []));
-  if(drawUndoStack.length > 30) drawUndoStack.shift();
-}
-
-function undoDrawing(){
-  const p = drawingPage();
-  if(!p || !drawUndoStack.length) return;
-  p.drawing = JSON.parse(drawUndoStack.pop());
-  saveSoon();
-  renderDrawings();
-}
-
 function clearDrawings(){
   const p = drawingPage();
   if(!p || !p.drawing || !p.drawing.length) return;
   if(!confirm("Clear all drawings from this page?")) return;
-  pushDrawUndo();
+  historyCapture();
   p.drawing = [];
+  p.modified = Date.now();
+  historyCapture();
   saveSoon();
   renderDrawings();
+  renderPages();
+  updateMeta();
 }
 
 function pointerPoint(e){
@@ -1511,10 +1593,14 @@ function eraseAt(pt){
     for(let j=1;j<s.points.length;j++){
       const a=s.points[j-1], b=s.points[j];
       if(pointDistance(a[0]*w,a[1]*h,b[0]*w,b[1]*h,px,py) <= threshold + (s.width||4)/2){
-        pushDrawUndo();
+        historyCapture();
         p.drawing.splice(i,1);
+        p.modified = Date.now();
+        historyCapture();
         saveSoon();
         renderDrawings();
+        renderPages();
+        updateMeta();
         return;
       }
     }
@@ -1527,8 +1613,6 @@ function bindDrawing(){
   $("drawHighlighter").addEventListener("click", () => setDrawTool("highlighter"));
   $("drawEraser").addEventListener("click", () => setDrawTool("eraser"));
   $("drawWidth").addEventListener("change", e => { drawWidth = Number(e.target.value) || 4; });
-  $("drawUndo").addEventListener("click", undoDrawing);
-  $("drawClear").addEventListener("click", clearDrawings);
 
   $("drawColor").addEventListener("click", e => {
     e.stopPropagation();
@@ -1549,7 +1633,7 @@ function bindDrawing(){
       drawingPointer={id:e.pointerId,eraser:true};
       return;
     }
-    pushDrawUndo();
+    historyCapture();
     const width = drawTool === "highlighter" ? Math.max(drawWidth*2.5, 10) : drawWidth;
     const opacity = drawTool === "highlighter" ? .28 : 1;
     drawingPointer={id:e.pointerId,stroke:{points:[pointerPoint(e)],color:drawColor,width,opacity}};
@@ -1577,6 +1661,7 @@ function bindDrawing(){
         const p=drawingPage();
         if(p && p.drawing.length){
           p.modified=Date.now();
+          historyCapture();
           saveSoon();
           renderPages();
           updateMeta();
@@ -1595,6 +1680,7 @@ function bindDrawing(){
 function withEditor(fn){
   const ed = $("editor");
   ed.focus();
+  historyCapture();
   fn(ed);
   commit({ list: true });
   syncToolbar();
@@ -1652,22 +1738,20 @@ function bindToolbar(){
     const el = $(id);
     if(!el) return;
     el.addEventListener("click", () => {
+      historyCapture();
       document.execCommand(SIMPLE_CMDS[id], false, null);
       commit({ list: true });
+      historyCapture();
       syncToolbar();
     });
   });
 
   $("undo").addEventListener("click", () => {
-    $("editor").focus();
-    document.execCommand("undo");
-    commit({ list: true });
+    undoPage();
     syncToolbar();
   });
   $("redo").addEventListener("click", () => {
-    $("editor").focus();
-    document.execCommand("redo");
-    commit({ list: true });
+    redoPage();
     syncToolbar();
   });
 
@@ -1681,8 +1765,10 @@ function bindToolbar(){
   $("style").addEventListener("change", e => {
     const v = e.target.value;
     if(v){
+      historyCapture();
       document.execCommand("formatBlock", false, "<" + v + ">");
       commit({ list: true });
+      historyCapture();
     }
     e.target.value = "";
   });
@@ -1690,8 +1776,10 @@ function bindToolbar(){
   $("link").addEventListener("click", () => {
     const url = prompt("Link address:", "https://");
     if(!url) return;
+    historyCapture();
     document.execCommand("createLink", false, url);
     commit({ list: true });
+    historyCapture();
   });
 
   $("textColor").addEventListener("click", e => {
@@ -1746,7 +1834,7 @@ document.addEventListener("selectionchange", () => {
 /* ============================================================
    Export
    ============================================================ */
-function exportHTML(){
+function saveHTML(){
   saveData();
   const html = "<!doctype html>\n" + document.documentElement.outerHTML;
   const blob = new Blob([html], { type:"text/html" });
@@ -1757,6 +1845,343 @@ function exportHTML(){
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 600);
+}
+
+function extractNotebookPayload(text){
+  const trimmed = String(text || "").trim();
+  if(!trimmed) return null;
+  if(trimmed.startsWith("{") || trimmed.startsWith("[")){
+    return JSON.parse(trimmed);
+  }
+  const doc = new DOMParser().parseFromString(trimmed, "text/html");
+  const node = doc.getElementById("notebook-data") ||
+    doc.querySelector("script[type='application/json']");
+  if(node && node.textContent.trim()){
+    return JSON.parse(node.textContent);
+  }
+  const m = trimmed.match(/<script[^>]*id=["']notebook-data["'][^>]*>([\s\S]*?)<\/script>/i);
+  if(m) return JSON.parse(m[1]);
+  throw new Error("No notebook data found in that file.");
+}
+
+function normalizeImported(raw){
+  if(!raw || typeof raw !== "object" || Array.isArray(raw)){
+    throw new Error("That file is not a OneBook notebook.");
+  }
+  const notebooks = Array.isArray(raw.notebooks) ? raw.notebooks : [];
+  if(!notebooks.length){
+    throw new Error("That notebook has no books to import.");
+  }
+  const pages = (Array.isArray(raw.pages) ? raw.pages : []).map(p => {
+    const modified = typeof p.modified === "number" ? p.modified : (Date.parse(p.modified) || Date.now());
+    const created = typeof p.created === "number" ? p.created : (Date.parse(p.created) || modified);
+    return {
+      id: p.id || uid("p"),
+      section: p.section || p.sectionId || "",
+      title: p.title || "",
+      favorite: !!p.favorite,
+      created,
+      modified,
+      tags: Array.isArray(p.tags) ? p.tags : [],
+      body: p.body || p.content || "",
+      drawing: Array.isArray(p.drawing) ? p.drawing : []
+    };
+  });
+  return {
+    version: raw.version || 5,
+    name: raw.name || "OneBook",
+    notebooks,
+    pages
+  };
+}
+
+function applyImported(next){
+  db = next;
+  currentNotebook = db.notebooks[0] ? db.notebooks[0].id : null;
+  currentSection = db.notebooks[0]?.sections?.[0]?.id || null;
+  currentPage = null;
+  Object.keys(openBooks).forEach(k => { delete openBooks[k]; });
+  db.notebooks.forEach(n => { openBooks[n.id] = true; });
+  renderAll();
+}
+
+function importHTMLFile(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const next = normalizeImported(extractNotebookPayload(String(reader.result || "")));
+      const label = (next.name || file.name || "notebook");
+      if(!confirm("Replace the open notebook with “" + label + "”? Unsaved changes in this tab will be lost.")) return;
+      applyImported(next);
+    } catch(err){
+      alert("Could not import that file.\n" + (err && err.message ? err.message : err));
+    }
+  };
+  reader.onerror = () => alert("Could not read that file.");
+  reader.readAsText(file);
+}
+
+function downloadBlob(blob, filename){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 600);
+}
+
+function pageFileBase(){
+  const p = pageObj();
+  const raw = (p && p.title) || $("pageTitle").value || "Page";
+  const name = raw.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim() || "Page";
+  return name;
+}
+
+function currentPagePlainText(){
+  const title = ($("pageTitle").value || "").trim();
+  const body = ($("editor").innerText || "").replace(/\u00a0/g, " ").trimEnd();
+  const tags = ($("tags").value || "").trim();
+  let out = title ? title + "\n\n" : "";
+  out += body;
+  if(tags) out += "\n\nTags: " + tags;
+  return out.replace(/\n{3,}/g, "\n\n");
+}
+
+function exportPageTxt(){
+  if(!pageObj()){ alert("Open a page first."); return; }
+  commit();
+  downloadBlob(new Blob([currentPagePlainText()], { type:"text/plain;charset=utf-8" }), pageFileBase() + ".txt");
+}
+
+function xmlEsc(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[c]));
+}
+
+function crc32(bytes){
+  let crc = 0xffffffff;
+  for(let i = 0; i < bytes.length; i++){
+    crc ^= bytes[i];
+    for(let j = 0; j < 8; j++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function zipStore(files){
+  const enc = new TextEncoder();
+  const locals = [];
+  const centrals = [];
+  let offset = 0;
+  files.forEach(f => {
+    const name = enc.encode(f.name);
+    const data = typeof f.data === "string" ? enc.encode(f.data) : f.data;
+    const crc = crc32(data);
+    const local = new Uint8Array(30 + name.length + data.length);
+    const lv = new DataView(local.buffer);
+    lv.setUint32(0, 0x04034b50, true);
+    lv.setUint16(4, 20, true);
+    lv.setUint16(8, 0, true);
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, data.length, true);
+    lv.setUint32(22, data.length, true);
+    lv.setUint16(26, name.length, true);
+    local.set(name, 30);
+    local.set(data, 30 + name.length);
+    locals.push(local);
+    const central = new Uint8Array(46 + name.length);
+    const cv = new DataView(central.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, data.length, true);
+    cv.setUint32(24, data.length, true);
+    cv.setUint16(28, name.length, true);
+    cv.setUint32(42, offset, true);
+    central.set(name, 46);
+    centrals.push(central);
+    offset += local.length;
+  });
+  const centralSize = centrals.reduce((n, x) => n + x.length, 0);
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, files.length, true);
+  ev.setUint16(10, files.length, true);
+  ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, offset, true);
+  const out = new Uint8Array(offset + centralSize + 22);
+  let p = 0;
+  locals.forEach(x => { out.set(x, p); p += x.length; });
+  centrals.forEach(x => { out.set(x, p); p += x.length; });
+  out.set(eocd, p);
+  return out;
+}
+
+function wmlRunsFromNode(node, marks){
+  marks = marks || { b:false, i:false, u:false };
+  if(node.nodeType === 3){
+    const text = node.nodeValue.replace(/\u00a0/g, " ");
+    if(!text) return "";
+    const parts = text.split("\n");
+    return parts.map((part, idx) => {
+      let run = "<w:r>";
+      if(marks.b || marks.i || marks.u){
+        run += "<w:rPr>";
+        if(marks.b) run += "<w:b/>";
+        if(marks.i) run += "<w:i/>";
+        if(marks.u) run += '<w:u w:val="single"/>';
+        run += "</w:rPr>";
+      }
+      run += "<w:t xml:space=\"preserve\">" + xmlEsc(part) + "</w:t></w:r>";
+      if(idx < parts.length - 1) run += "<w:r><w:br/></w:r>";
+      return run;
+    }).join("");
+  }
+  if(node.nodeType !== 1) return "";
+  const tag = node.tagName.toLowerCase();
+  if(tag === "br") return "<w:r><w:br/></w:r>";
+  const next = {
+    b: marks.b || tag === "b" || tag === "strong",
+    i: marks.i || tag === "i" || tag === "em",
+    u: marks.u || tag === "u"
+  };
+  let html = "";
+  node.childNodes.forEach(ch => { html += wmlRunsFromNode(ch, next); });
+  return html;
+}
+
+function wmlParagraphsFromEditor(){
+  const root = $("editor");
+  const blocks = [];
+  const pushPara = (style, node) => {
+    const runs = wmlRunsFromNode(node);
+    blocks.push('<w:p>' + (style ? '<w:pPr><w:pStyle w:val="' + style + '"/></w:pPr>' : "") + (runs || "<w:r><w:t></w:t></w:r>") + "</w:p>");
+  };
+  const walk = nodes => {
+    nodes.forEach(node => {
+      if(node.nodeType === 3){
+        if(node.nodeValue.trim()) pushPara("", node);
+        return;
+      }
+      if(node.nodeType !== 1) return;
+      const tag = node.tagName.toLowerCase();
+      if(tag === "h1") pushPara("Heading1", node);
+      else if(tag === "h2") pushPara("Heading2", node);
+      else if(tag === "h3") pushPara("Heading3", node);
+      else if(tag === "li" || tag === "p" || tag === "blockquote" || tag === "pre") pushPara("", node);
+      else if(tag === "ul" || tag === "ol" || tag === "div") walk(node.childNodes);
+      else pushPara("", node);
+    });
+  };
+  walk(root.childNodes);
+  if(!blocks.length) blocks.push("<w:p><w:r><w:t></w:t></w:r></w:p>");
+  return blocks.join("");
+}
+
+function exportPageDocx(){
+  if(!pageObj()){ alert("Open a page first."); return; }
+  commit();
+  const title = ($("pageTitle").value || "").trim() || "Untitled page";
+  const body = wmlParagraphsFromEditor();
+  const documentXml =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+    "<w:body>" +
+    '<w:p><w:pPr><w:pStyle w:val="Title"/></w:pPr><w:r><w:t>' + xmlEsc(title) + "</w:t></w:r></w:p>" +
+    body +
+    '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>' +
+    "</w:body></w:document>";
+  const contentTypes =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+    "</Types>";
+  const rels =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+    "</Relationships>";
+  const docRels =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+    "</Relationships>";
+  const styles =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+    '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:pPr><w:spacing w:after="240"/></w:pPr><w:rPr><w:b/><w:sz w:val="48"/><w:szCs w:val="48"/></w:rPr></w:style>' +
+    '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:rPr><w:b/><w:sz w:val="32"/></w:rPr></w:style>' +
+    '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:rPr><w:b/><w:sz w:val="26"/></w:rPr></w:style>' +
+    '<w:style w:type="paragraph" w:styleId="Heading3"><w:name w:val="heading 3"/><w:rPr><w:b/><w:sz w:val="24"/></w:rPr></w:style>' +
+    "</w:styles>";
+  const bytes = zipStore([
+    { name:"[Content_Types].xml", data: contentTypes },
+    { name:"_rels/.rels", data: rels },
+    { name:"word/document.xml", data: documentXml },
+    { name:"word/_rels/document.xml.rels", data: docRels },
+    { name:"word/styles.xml", data: styles }
+  ]);
+  downloadBlob(new Blob([bytes], { type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), pageFileBase() + ".docx");
+}
+
+function exportCurrentPage(){
+  if(!pageObj()){ alert("Open a page first."); return; }
+  const pick = prompt("Export current page as:\n1 = Text (.txt)\n2 = Word (.docx)", "1");
+  if(pick === null) return;
+  const v = String(pick).trim().toLowerCase();
+  if(v === "2" || v === "docx" || v === "word" || v === ".docx") exportPageDocx();
+  else exportPageTxt();
+}
+
+function showFileMenu(anchor){
+  closeCardMenu();
+  const menu = document.createElement("div");
+  menu.className = "cardMenu";
+
+  const addItem = (svg, label, fn) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.innerHTML = svg + "<span>" + label + "</span>";
+    b.addEventListener("click", e => {
+      e.stopPropagation();
+      closeCardMenu();
+      fn();
+    });
+    menu.appendChild(b);
+  };
+
+  addItem(
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h12l3 3v15H4V3z"/><path d="M8 3v6h8V3"/><path d="M8 21v-6h8v6"/></svg>',
+    "Save data",
+    saveHTML
+  );
+  addItem(
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/><path d="M12 3v10"/><path d="m8 9 4 4 4-4"/></svg>',
+    "Import data",
+    () => $("importFile").click()
+  );
+
+  const sep = document.createElement("div");
+  sep.className = "menuSep";
+  menu.appendChild(sep);
+
+  addItem(
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h6"/></svg>',
+    "Export current page",
+    exportCurrentPage
+  );
+
+  document.body.appendChild(menu);
+  cardMenu = menu;
+  const r = anchor.getBoundingClientRect();
+  const w = menu.offsetWidth, h = menu.offsetHeight;
+  menu.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left)) + "px";
+  menu.style.top  = Math.max(8, Math.min(window.innerHeight - h - 8, r.bottom + 6)) + "px";
 }
 
 /* ============================================================
@@ -1782,7 +2207,16 @@ function wire(){
   $("emptyNewPage").addEventListener("click", newPage);
   $("newSection").addEventListener("click", newSection);
   $("newNotebook").addEventListener("click", newNotebook);
-  $("exportBtn").addEventListener("click", exportHTML);
+  $("fileMenuBtn").addEventListener("click", e => {
+    e.stopPropagation();
+    if(cardMenu){ closeCardMenu(); return; }
+    showFileMenu($("fileMenuBtn"));
+  });
+  $("importFile").addEventListener("change", e => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    importHTMLFile(file);
+  });
 
   $("notebookToggle").addEventListener("click", e => {
     e.stopPropagation();
@@ -1803,11 +2237,12 @@ function wire(){
   });
 
   /* Editing */
-  $("pageTitle").addEventListener("input", () => commit({ list:true }));
-  $("tags").addEventListener("input", () => commit({ meta:true }));
+  $("pageTitle").addEventListener("input", () => { commit({ list:true }); historyCaptureSoon(); });
+  $("tags").addEventListener("input", () => { commit({ meta:true }); historyCaptureSoon(); });
   $("editor").addEventListener("input", () => {
     commit();
     updateMeta();
+    historyCaptureSoon();
   });
 
   /* Pasted HTML often carries an explicit black font colour from Office,
@@ -1828,6 +2263,7 @@ function wire(){
     if(!document.documentElement.classList.contains("dark")) return;
 
     e.preventDefault();
+    historyCapture();
 
     const box = document.createElement("div");
     box.innerHTML = html;
@@ -1849,6 +2285,7 @@ function wire(){
 
     document.execCommand("insertHTML", false, box.innerHTML);
     commit();
+    historyCapture();
     updateMeta();
   });
 
@@ -1864,9 +2301,21 @@ function wire(){
   document.addEventListener("click", () => { closeCardMenu(); closePopover(); });
   document.addEventListener("keydown", e => {
     if(e.key === "Escape"){ closeCardMenu(); closePopover(); }
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z"){
+      e.preventDefault();
+      if(e.shiftKey) redoPage(); else undoPage();
+      syncToolbar();
+      return;
+    }
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y"){
+      e.preventDefault();
+      redoPage();
+      syncToolbar();
+      return;
+    }
     if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s"){
       e.preventDefault();
-      exportHTML();
+      saveHTML();
     }
   });
   window.addEventListener("beforeunload", saveData);
