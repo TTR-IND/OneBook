@@ -1,5 +1,5 @@
 <!--
-  OneBook 1.3
+  OneBook 1.4 - Experimental
   Copyright (c) 2026 Josh Wheatstone
   All rights reserved.
 
@@ -26,6 +26,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OneBook</title>
+<link rel="icon" href="icon.png" type="image/png">
 <style>
 /* ============================================================
    Design tokens
@@ -578,6 +579,51 @@ body.drawingMode .drawIndicator{opacity:1;transform:none}
 .cardMenu .danger:hover{background:var(--danger-soft)}
 .cardMenu .menuSep{height:1px;margin:4px 6px;background:var(--line)}
 
+.appDialogBack{
+  position:fixed;inset:0;z-index:10000;
+  display:grid;place-items:center;padding:24px;
+  background:rgba(18,24,40,.38);
+}
+html.dark .appDialogBack{background:rgba(0,0,0,.55)}
+.appDialog{
+  width:min(440px,100%);
+  background:var(--surface);color:var(--text);
+  border:1px solid var(--line);border-radius:16px;
+  box-shadow:var(--shadow-3);
+  padding:18px 18px 14px;
+  animation:pop .13s cubic-bezier(.2,.9,.3,1.2);
+}
+.appDialog h2{
+  margin:0 0 8px;font-size:16px;font-weight:700;letter-spacing:-.02em;
+}
+.appDialog .appDialogMsg{
+  margin:0;font-size:13px;line-height:1.55;color:var(--text-dim);
+  white-space:pre-wrap;
+}
+.appDialog input{
+  display:block;width:100%;margin-top:14px;height:36px;
+  border:1px solid var(--line);border-radius:10px;
+  background:var(--surface-2);padding:0 11px;outline:0;
+}
+.appDialog input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.appDialogActions{
+  display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:16px;
+}
+.appDialogActions button{
+  height:34px;padding:0 13px;border-radius:9px;
+  font-size:13px;font-weight:600;color:var(--text-dim);
+}
+.appDialogActions button:hover{background:var(--surface-3);color:var(--text)}
+.appDialogActions .primary{
+  background:linear-gradient(140deg,var(--accent),var(--accent-2));
+  color:#fff;
+}
+.appDialogActions .primary:hover{filter:brightness(1.07);color:#fff;background:linear-gradient(140deg,var(--accent),var(--accent-2))}
+.appDialogActions .danger{
+  background:var(--danger-soft);color:var(--danger);
+}
+.appDialogActions .danger:hover{background:var(--danger-soft);color:var(--danger);filter:brightness(1.05)}
+
 .popover{
   position:fixed;z-index:9000;display:grid;grid-template-columns:repeat(5,1fr);
   gap:6px;padding:9px;background:var(--surface);
@@ -873,6 +919,9 @@ let currentPage     = null;
 const openBooks     = {};
 let searchTerm      = "";
 let notebookCollapsed = store.get("onebook-notebook-collapsed") === "1";
+const MODEL_KEY = "onebook-data-model";
+const DB_KEY    = "onebook-db";
+let dataModel   = store.get(MODEL_KEY) === "local" ? "local" : "file";
 let saveTimer       = null;
 let lastTextColor   = "#5b63e8";
 let drawMode        = false;
@@ -889,6 +938,115 @@ let historyLastSnapshot = null;
 db.notebooks.forEach(n => openBooks[n.id] = true);
 
 /* ============================================================
+   In-app dialogs
+   ============================================================ */
+let appDialogOpen = null;
+
+function finishAppDialog(value){
+  if(!appDialogOpen) return;
+  const { overlay, resolve } = appDialogOpen;
+  appDialogOpen = null;
+  overlay.remove();
+  resolve(value);
+}
+
+function appDialog(opts){
+  opts = opts || {};
+  if(appDialogOpen) finishAppDialog(null);
+  if(typeof closeCardMenu === "function") closeCardMenu();
+  if(typeof closePopover === "function") closePopover();
+
+  return new Promise(resolve => {
+    const overlay = document.createElement("div");
+    overlay.className = "appDialogBack";
+    const box = document.createElement("div");
+    box.className = "appDialog";
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-modal", "true");
+
+    if(opts.title){
+      const h = document.createElement("h2");
+      h.textContent = opts.title;
+      box.appendChild(h);
+    }
+    if(opts.message){
+      const p = document.createElement("p");
+      p.className = "appDialogMsg";
+      p.textContent = opts.message;
+      box.appendChild(p);
+    }
+
+    let input = null;
+    if(opts.input){
+      input = document.createElement("input");
+      input.type = "text";
+      input.value = opts.value == null ? "" : String(opts.value);
+      if(opts.placeholder) input.placeholder = opts.placeholder;
+      box.appendChild(input);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "appDialogActions";
+    const buttons = opts.actions || [
+      ...(opts.cancel === false ? [] : [{ id:"cancel", label: opts.cancelLabel || "Cancel" }]),
+      { id:"ok", label: opts.okLabel || "OK", primary: !opts.danger, danger: !!opts.danger }
+    ];
+    buttons.forEach(def => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = def.label;
+      if(def.primary) b.className = "primary";
+      if(def.danger) b.className = (b.className ? b.className + " " : "") + "danger";
+      b.addEventListener("click", e => {
+        e.stopPropagation();
+        if(def.id === "ok" && opts.input) finishAppDialog(input.value);
+        else if(def.id === "cancel") finishAppDialog(opts.input ? null : false);
+        else finishAppDialog(def.id === "ok" ? true : def.id);
+      });
+      actions.appendChild(b);
+    });
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    overlay.addEventListener("click", e => {
+      if(e.target === overlay) finishAppDialog(opts.input ? null : false);
+    });
+    box.addEventListener("click", e => e.stopPropagation());
+    box.addEventListener("keydown", e => {
+      if(e.key === "Enter" && opts.input){
+        e.preventDefault();
+        finishAppDialog(input.value);
+      }
+    });
+
+    document.body.appendChild(overlay);
+    appDialogOpen = { overlay, resolve };
+    if(input){
+      input.focus();
+      input.select();
+    } else {
+      const last = actions.querySelector("button.primary, button.danger, button");
+      if(last) last.focus();
+    }
+  });
+}
+
+function appAlert(message, title){
+  return appDialog({ title: title || "", message, cancel: false, okLabel: "OK" });
+}
+function appConfirm(message, title, danger){
+  return appDialog({
+    title: title || "Confirm",
+    message,
+    danger: !!danger,
+    okLabel: danger ? "Delete" : "OK",
+    cancelLabel: "Cancel"
+  });
+}
+function appPrompt(title, value){
+  return appDialog({ title, input: true, value: value || "", okLabel: "Save", cancelLabel: "Cancel" });
+}
+
+/* ============================================================
    Data helpers
    ============================================================ */
 function notebook(){ return db.notebooks.find(n => n.id === currentNotebook) || null; }
@@ -897,8 +1055,27 @@ function section(){ return sectionsOf(notebook()).find(s => s.id === currentSect
 function pages(){ return db.pages.filter(p => p.section === currentSection); }
 function pageObj(){ return db.pages.find(p => p.id === currentPage) || null; }
 
-function saveData(){ DATA.textContent = JSON.stringify(db, null, 2); }
+function persistLocalDb(){
+  try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e){}
+}
+
+function saveData(){
+  DATA.textContent = JSON.stringify(db, null, 2);
+  if(dataModel === "local") persistLocalDb();
+}
 function saveSoon(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveData, 250); }
+
+function loadStoredDb(){
+  if(dataModel !== "local") return;
+  let raw = null;
+  try { raw = localStorage.getItem(DB_KEY); } catch(e){ raw = null; }
+  if(!raw) return;
+  try {
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed !== "object" || !Array.isArray(parsed.notebooks)) return;
+    db = parsed;
+  } catch(e){}
+}
 
 function ensure(){
   if(!db.notebooks || !db.notebooks.length){
@@ -1325,12 +1502,12 @@ function newNotebook(){
   renderAll();
 }
 
-function renameSection(id){
+async function renameSection(id){
   const nb = db.notebooks.find(n => (n.sections || []).some(s => s.id === id));
   if(!nb) return;
   const sec = nb.sections.find(s => s.id === id);
   if(!sec) return;
-  const v = prompt("Section name:", sec.name || "Untitled section");
+  const v = await appPrompt("Section name", sec.name || "Untitled section");
   if(v === null) return;
   const name = v.trim();
   if(!name) return;
@@ -1338,10 +1515,10 @@ function renameSection(id){
   renderAll();
 }
 
-function renamePageById(id){
+async function renamePageById(id){
   const p = db.pages.find(x => x.id === id);
   if(!p) return;
-  const v = prompt("Page title:", p.title || "Untitled page");
+  const v = await appPrompt("Page title", p.title || "Untitled page");
   if(v === null) return;
   const name = v.trim();
   if(!name) return;
@@ -1350,10 +1527,10 @@ function renamePageById(id){
   renderAll();
 }
 
-function renameNotebook(id){
+async function renameNotebook(id){
   const nb = db.notebooks.find(x => x.id === id);
   if(!nb) return;
-  const v = prompt("Notebook name:", nb.name || "Untitled notebook");
+  const v = await appPrompt("Notebook name", nb.name || "Untitled notebook");
   if(v === null) return;
   const name = v.trim();
   if(!name) return;
@@ -1361,11 +1538,15 @@ function renameNotebook(id){
   renderAll();
 }
 
-function deleteNotebookById(id){
-  if(db.notebooks.length <= 1){ alert("You can’t delete the last notebook."); return; }
+async function deleteNotebookById(id){
+  if(db.notebooks.length <= 1){
+    await appAlert("You can’t delete the last notebook.", "Notebooks");
+    return;
+  }
   const nb = db.notebooks.find(x => x.id === id);
   if(!nb) return;
-  if(!confirm('Delete notebook “' + (nb.name || "Untitled notebook") + '” and all of its pages?')) return;
+  const ok = await appConfirm('Delete notebook “' + (nb.name || "Untitled notebook") + '” and all of its pages?', "Delete notebook", true);
+  if(!ok) return;
 
   const ids = new Set((nb.sections || []).map(s => s.id));
   db.pages = db.pages.filter(p => !ids.has(p.section));
@@ -1379,13 +1560,17 @@ function deleteNotebookById(id){
   renderAll();
 }
 
-function deleteSectionById(id){
+async function deleteSectionById(id){
   const nb = db.notebooks.find(n => (n.sections || []).some(s => s.id === id));
   if(!nb) return;
-  if((nb.sections || []).length <= 1){ alert("You can’t delete the last section in a notebook."); return; }
+  if((nb.sections || []).length <= 1){
+    await appAlert("You can’t delete the last section in a notebook.", "Sections");
+    return;
+  }
   const sec = nb.sections.find(s => s.id === id);
   if(!sec) return;
-  if(!confirm('Delete section “' + (sec.name || "Untitled section") + '” and its pages?')) return;
+  const ok = await appConfirm('Delete section “' + (sec.name || "Untitled section") + '” and its pages?', "Delete section", true);
+  if(!ok) return;
 
   nb.sections = nb.sections.filter(s => s.id !== id);
   db.pages = db.pages.filter(p => p.section !== id);
@@ -1553,10 +1738,10 @@ function setDrawTool(tool){
   $("drawingLayer").style.cursor = tool === "eraser" ? "cell" : "crosshair";
 }
 
-function clearDrawings(){
+async function clearDrawings(){
   const p = drawingPage();
   if(!p || !p.drawing || !p.drawing.length) return;
-  if(!confirm("Clear all drawings from this page?")) return;
+  if(!await appConfirm("Clear all drawings from this page?", "Clear drawings", true)) return;
   historyCapture();
   p.drawing = [];
   p.modified = Date.now();
@@ -1773,8 +1958,8 @@ function bindToolbar(){
     e.target.value = "";
   });
 
-  $("link").addEventListener("click", () => {
-    const url = prompt("Link address:", "https://");
+  $("link").addEventListener("click", async () => {
+    const url = await appPrompt("Link address", "https://");
     if(!url) return;
     historyCapture();
     document.execCommand("createLink", false, url);
@@ -1836,6 +2021,11 @@ document.addEventListener("selectionchange", () => {
    ============================================================ */
 function saveHTML(){
   saveData();
+  if(dataModel === "local"){
+    persistLocalDb();
+    appAlert("Notebook saved in this browser.", "Saved");
+    return;
+  }
   const html = "<!doctype html>\n" + document.documentElement.outerHTML;
   const blob = new Blob([html], { type:"text/html" });
   const a = document.createElement("a");
@@ -1845,6 +2035,28 @@ function saveHTML(){
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 600);
+}
+
+function exportAllJson(){
+  saveData();
+  const payload = JSON.stringify(db, null, 2);
+  downloadBlob(new Blob([payload], { type:"application/json;charset=utf-8" }), (db.name || "OneBook") + ".json");
+}
+
+async function openPreferences(){
+  const pick = await appDialog({
+    title: "Preferences",
+    message: "Data model\n\nSelf-contained file keeps the notebook inside this HTML, like TiddlyWiki. Save downloads the whole file.\n\nThis browser stores the notebook in localStorage. Save writes there. Export downloads a JSON copy of all data.",
+    actions: [
+      { id: "file", label: dataModel === "file" ? "Self-contained file ✓" : "Self-contained file", primary: dataModel === "file" },
+      { id: "local", label: dataModel === "local" ? "This browser ✓" : "This browser", primary: dataModel === "local" },
+      { id: "cancel", label: "Close" }
+    ]
+  });
+  if(pick !== "file" && pick !== "local") return;
+  dataModel = pick;
+  store.set(MODEL_KEY, dataModel);
+  saveData();
 }
 
 function extractNotebookPayload(text){
@@ -1908,17 +2120,18 @@ function applyImported(next){
 function importHTMLFile(file){
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       const next = normalizeImported(extractNotebookPayload(String(reader.result || "")));
       const label = (next.name || file.name || "notebook");
-      if(!confirm("Replace the open notebook with “" + label + "”? Unsaved changes in this tab will be lost.")) return;
+      const ok = await appConfirm("Replace the open notebook with “" + label + "”? Unsaved changes in this tab will be lost.", "Import data");
+      if(!ok) return;
       applyImported(next);
     } catch(err){
-      alert("Could not import that file.\n" + (err && err.message ? err.message : err));
+      await appAlert((err && err.message ? err.message : String(err)), "Could not import that file");
     }
   };
-  reader.onerror = () => alert("Could not read that file.");
+  reader.onerror = () => { appAlert("Could not read that file.", "Import data"); };
   reader.readAsText(file);
 }
 
@@ -1949,8 +2162,8 @@ function currentPagePlainText(){
   return out.replace(/\n{3,}/g, "\n\n");
 }
 
-function exportPageTxt(){
-  if(!pageObj()){ alert("Open a page first."); return; }
+async function exportPageTxt(){
+  if(!pageObj()){ await appAlert("Open a page first.", "Export"); return; }
   commit();
   downloadBlob(new Blob([currentPagePlainText()], { type:"text/plain;charset=utf-8" }), pageFileBase() + ".txt");
 }
@@ -2080,8 +2293,8 @@ function wmlParagraphsFromEditor(){
   return blocks.join("");
 }
 
-function exportPageDocx(){
-  if(!pageObj()){ alert("Open a page first."); return; }
+async function exportPageDocx(){
+  if(!pageObj()){ await appAlert("Open a page first.", "Export"); return; }
   commit();
   const title = ($("pageTitle").value || "").trim() || "Untitled page";
   const body = wmlParagraphsFromEditor();
@@ -2129,13 +2342,19 @@ function exportPageDocx(){
   downloadBlob(new Blob([bytes], { type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), pageFileBase() + ".docx");
 }
 
-function exportCurrentPage(){
-  if(!pageObj()){ alert("Open a page first."); return; }
-  const pick = prompt("Export current page as:\n1 = Text (.txt)\n2 = Word (.docx)", "1");
-  if(pick === null) return;
-  const v = String(pick).trim().toLowerCase();
-  if(v === "2" || v === "docx" || v === "word" || v === ".docx") exportPageDocx();
-  else exportPageTxt();
+async function exportCurrentPage(){
+  if(!pageObj()){ await appAlert("Open a page first.", "Export"); return; }
+  const pick = await appDialog({
+    title: "Export current page",
+    message: "Choose a file format for the open page.",
+    actions: [
+      { id: "cancel", label: "Cancel" },
+      { id: "txt", label: "Text (.txt)" },
+      { id: "docx", label: "Word (.docx)", primary: true }
+    ]
+  });
+  if(pick === "docx") exportPageDocx();
+  else if(pick === "txt") exportPageTxt();
 }
 
 function showFileMenu(anchor){
@@ -2165,6 +2384,11 @@ function showFileMenu(anchor){
     "Import data",
     () => $("importFile").click()
   );
+  addItem(
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>',
+    "Export data",
+    exportAllJson
+  );
 
   const sep = document.createElement("div");
   sep.className = "menuSep";
@@ -2174,6 +2398,42 @@ function showFileMenu(anchor){
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h6"/></svg>',
     "Export current page",
     exportCurrentPage
+  );
+
+  const sepPref = document.createElement("div");
+  sepPref.className = "menuSep";
+  menu.appendChild(sepPref);
+
+  addItem(
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    "Preferences",
+    openPreferences
+  );
+
+  const sep2 = document.createElement("div");
+  sep2.className = "menuSep";
+  menu.appendChild(sep2);
+
+  addItem(
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 10v6"/><circle cx="12" cy="7.2" r=".9" fill="currentColor" stroke="none"/></svg>',
+    "About",
+    () => appAlert(
+      "OneBook 1.4\n" +
+      "Copyright (c) 2026 Josh Wheatstone\n" +
+      "All rights reserved.\n\n" +
+      "OneBook is an offline, self-contained notebook application.\n\n" +
+      "Portions of this software are derived from TiddlyWiki Classic,\n" +
+      "created by Jeremy Ruston and contributors.\n\n" +
+      "TiddlyWiki Classic is licensed under the BSD 3-Clause License.\n\n" +
+      "TiddlyWiki Classic attribution:\n" +
+      "  Copyright (c) 2004-2007, Jeremy Ruston\n" +
+      "  Copyright (c) 2007-2025, UnaMesa Association\n" +
+      "  All rights reserved.\n\n" +
+      "The BSD 3-Clause license applies to the portions of OneBook\n" +
+      "derived from TiddlyWiki Classic. See the project README and\n" +
+      "LICENSE-TIDDLYWIKI for the applicable license text.",
+      "About"
+    )
   );
 
   document.body.appendChild(menu);
@@ -2300,7 +2560,10 @@ function wire(){
   /* Global dismissal */
   document.addEventListener("click", () => { closeCardMenu(); closePopover(); });
   document.addEventListener("keydown", e => {
-    if(e.key === "Escape"){ closeCardMenu(); closePopover(); }
+    if(e.key === "Escape"){
+      if(appDialogOpen){ e.preventDefault(); finishAppDialog(null); return; }
+      closeCardMenu(); closePopover();
+    }
     if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z"){
       e.preventDefault();
       if(e.shiftKey) redoPage(); else undoPage();
@@ -2325,6 +2588,12 @@ function wire(){
    Boot
    ============================================================ */
 wire();
+
+loadStoredDb();
+currentNotebook = db.notebooks[0] ? db.notebooks[0].id : null;
+currentSection  = db.notebooks[0]?.sections[0]?.id || null;
+Object.keys(openBooks).forEach(k => { delete openBooks[k]; });
+(db.notebooks || []).forEach(n => openBooks[n.id] = true);
 
 const stored = store.get(THEME_KEY);
 const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
